@@ -37,24 +37,3 @@ rule configure ( properties * )
 exe jump
     : jump.cpp
     ;
-
-exe exit
-    : exit.cpp
-    ;
-
-exe transfer
-    : transfer.cpp
-    ;
-
-exe exception
-    : exception.cpp
-    ;
-
-exe stacked
-    : stacked.cpp
-    ;
-
-exe echosse
-    : echosse.cpp
-    : <conditional>@configure
-    ;

@@ -9,36 +9,38 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/context/all.hpp>
+#include <boost/context/execution_context.hpp>
 
-#include "simple_stack_allocator.hpp"
+boost::context::execution_context * ctx1 = 0;
+boost::context::execution_context * ctx2 = 0;
+boost::context::execution_context * ctx = 0;
 
-namespace ctx = boost::context;
-
-typedef ctx::simple_stack_allocator<
-    8 * 1024 * 1024, // 8MB
-    64 * 1024, // 64kB
-    8 * 1024 // 8kB
->       stack_allocator;
-
-ctx::fcontext_t fcm = 0;
-ctx::fcontext_t fc1 = 0;
-
-void f1( intptr_t)
+void f1()
 {
     std::cout << "f1: entered" << std::endl;
-    ctx::jump_fcontext( & fc1, fcm, 0, false);
+    ctx2->jump_to();
+    std::cout << "f1: re-entered" << std::endl;
+    ctx2->jump_to();
+}
+
+void f2()
+{
+    std::cout << "f2: entered" << std::endl;
+    ctx1->jump_to();
+    std::cout << "f2: re-entered" << std::endl;
+    ctx->jump_to();
 }
 
 int main( int argc, char * argv[])
 {
-    stack_allocator alloc;
-
-    void * base1 = alloc.allocate( stack_allocator::default_stacksize());
-    fc1 = ctx::make_fcontext( base1, stack_allocator::default_stacksize(), f1);
-
-    std::cout << "main: call start_fcontext( & fcm, fc1, 0)" << std::endl;
-    ctx::jump_fcontext( & fcm, fc1, 0, false);
+    boost::context::execution_context ctx1_( f1, boost::context::fixedsize() );
+    ctx1 = & ctx1_;
+    boost::context::execution_context ctx2_( f2, boost::context::fixedsize() );
+    ctx2 = & ctx2_;
+    boost::context::execution_context ctx_;
+    ctx = & ctx_;
+    
+    ctx1->jump_to();
 
     std::cout << "main: done" << std::endl;
 
