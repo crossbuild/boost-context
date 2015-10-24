@@ -56,11 +56,11 @@ jump_fcontext:
     fnstcw   0x4(%rsp)
 
 1:
-    /* store RSP (pointing to context-data) in RDI */
-    movq  %rsp, (%rdi)
+    /* store RSP (pointing to context-data) in RAX */
+    movq  %rsp, %rax
 
-    /* restore RSP (pointing to context-data) from RSI */
-    movq  %rsi, %rsp
+    /* restore RSP (pointing to context-data) from RDI */
+    movq  %rdi, %rsp
 
     /* test for flag preserve_fpu */
     cmp  $0, %rcx
@@ -85,10 +85,15 @@ jump_fcontext:
     /* restore return-address */
     popq  %r8
 
-    /* use third arg as return-value after jump */
-    movq  %rdx, %rax
-    /* use third arg as first arg in context function */
-    movq  %rdx, %rdi
+    /* pass fcontext_t and intptr_t data as arguments for context function */
+    /* use stack address as first arg in context function */
+    movq  %rax, %rdi
+    /* use second arg as second arg in context function, keep RSI */
+
+    /* return fcontext_t and intptr_t data as struct transfer_t from jump_fcontext() */
+    /* last address of stack == fcontext_t return-value after jump, keep RAX */
+    /* use second arg as return-value after jump */
+    movq  %rsi, %rdx
 
     /* indirect jump to context */
     jmp  *%r8
