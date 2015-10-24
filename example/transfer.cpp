@@ -21,34 +21,30 @@ typedef ctx::simple_stack_allocator<
     8 * 1024 // 8kB
 >       stack_allocator;
 
-ctx::fcontext_t fcm = 0;
-ctx::fcontext_t fc1 = 0;
-
 typedef std::pair< int, int >   pair_t;
 
-void f1( intptr_t param)
-{
-    pair_t * p = ( pair_t *) param;
+void f1( ctx::transfer_t t_) {
+    pair_t * p = ( pair_t *) t_.data;
 
-    p = ( pair_t *) ctx::jump_fcontext( & fc1, fcm, ( intptr_t) ( p->first + p->second) );
+    ctx::transfer_t t = ctx::jump_fcontext( t_.ctx, ( intptr_t) ( p->first + p->second) );
+    p = ( pair_t *) t.data;
 
-    ctx::jump_fcontext( & fc1, fcm, ( intptr_t) ( p->first + p->second) );
+    ctx::jump_fcontext( t.ctx, ( intptr_t) ( p->first + p->second) );
 }
 
-int main( int argc, char * argv[])
-{
+int main( int argc, char * argv[]) {
     stack_allocator alloc;
 
     void * sp = alloc.allocate( stack_allocator::default_stacksize() );
-    fc1 = ctx::make_fcontext( sp, stack_allocator::default_stacksize(), f1);
+    ctx::fcontext_t ctx = ctx::make_fcontext( sp, stack_allocator::default_stacksize(), f1);
 
     pair_t p( std::make_pair( 2, 7) );
-    int res = ( int) ctx::jump_fcontext( & fcm, fc1, ( intptr_t) & p);
-    std::cout << p.first << " + " << p.second << " == " << res << std::endl;
+    ctx::transfer_t t = ctx::jump_fcontext( ctx, ( intptr_t) & p);
+    std::cout << p.first << " + " << p.second << " == " << ( int)t.data << std::endl;
 
     p = std::make_pair( 5, 6);
-    res = ( int) ctx::jump_fcontext( & fcm, fc1, ( intptr_t) & p);
-    std::cout << p.first << " + " << p.second << " == " << res << std::endl;
+    t = ctx::jump_fcontext( t.ctx, ( intptr_t) & p);
+    std::cout << p.first << " + " << p.second << " == " << ( int)t.data << std::endl;
 
     std::cout << "main: done" << std::endl;
 
