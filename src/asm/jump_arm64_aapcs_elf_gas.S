@@ -67,7 +67,7 @@ jump_fcontext:
 # are doing.
 #
 #    # test if fpu env should be preserved
-#    cmp  w3, #0
+#    cmp  w2, #0
 #    b.eq  1f
 
     # save d8 - d15
@@ -88,16 +88,14 @@ jump_fcontext:
     # save LR as PC
     str  x30, [sp, #0xa0]
 
-    # store RSP (pointing to context-data) in first argument (x0).
-    # STR cannot have sp as a target register
-    mov  x4, sp
-    str  x4, [x0]
+    # store RSP (pointing to context-data) in X3
+    mov  x3, sp
 
-    # restore RSP (pointing to context-data) from A2 (x1)
-    mov  sp, x1
+    # restore RSP (pointing to context-data) from X0
+    mov  sp, x0
 
 #    # test if fpu env should be preserved
-#    cmp  w3, #0
+#    cmp  w2, #0
 #    b.eq  2f
 
     # load d8 - d15
@@ -115,9 +113,12 @@ jump_fcontext:
     ldp  x27, x28, [sp, #0x80]
     ldp  x29, x30, [sp, #0x90]
 
-    # use third arg as return value after jump
-    # and as first arg in context function
-    mov  x0, x2
+    # pass fcontext_t and intptr_t data as arguments for context function
+    # use stack address as first arg in context function
+    mov  x0, x3
+    # return fcontext_t and intptr_t data as struct transfer_t from jump_fcontext()
+    # last address of stack == fcontext_t return-value after jump, keep X1
+    # use second arg as return-value after jump
 
     # load pc
     ldr  x4, [sp, #0xa0]
@@ -125,7 +126,7 @@ jump_fcontext:
     # restore stack from GP + FPU
     add  sp, sp, #0xb0
 
-    ret x4
+    ret  x4  
 .size   jump_fcontext,.-jump_fcontext
 # Mark that we don't need executable stack.
 .section .note.GNU-stack,"",%progbits
