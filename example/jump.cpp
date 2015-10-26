@@ -21,21 +21,22 @@ typedef ctx::simple_stack_allocator<
     8 * 1024 // 8kB
 >       stack_allocator;
 
-void f1( ctx::transfer_t t)
-{
-    std::cout << "f1: entered" << std::endl;
-    ctx::jump_fcontext( t.ctx, t.data, false);
+void f1( ctx::transfer_t t_) {
+    std::cout << "f1: entered first time" << std::endl;
+    ctx::transfer_t t = ctx::jump_fcontext( t_.ctx, 1, false);
+    std::cout << "f1: entered second time" << std::endl;
+    ctx::jump_fcontext( t.ctx, 3, false);
 }
 
-int main( int argc, char * argv[])
-{
+int main( int argc, char * argv[]) {
     stack_allocator alloc;
 
     void * base1 = alloc.allocate( stack_allocator::default_stacksize());
     ctx::fcontext_t ctx = ctx::make_fcontext( base1, stack_allocator::default_stacksize(), f1);
 
     std::cout << "main: call start_fcontext( ctx, 0)" << std::endl;
-    ctx::jump_fcontext( ctx, 0, false);
+    ctx::transfer_t t = ctx::jump_fcontext( ctx, 0, false);
+    t = ctx::jump_fcontext( t.ctx, 2, false);
 
     std::cout << "main: done" << std::endl;
 
