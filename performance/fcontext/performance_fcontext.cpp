@@ -24,12 +24,11 @@ typedef boost::context::simple_stack_allocator<
 
 bool preserve_fpu = false;
 boost::uint64_t jobs = 1000;
-boost::context::fcontext_t fcm = 0;
-boost::context::fcontext_t fc = 0;
 
-static void foo( intptr_t) {
+static void foo( boost::context::transfer_t t_) {
+    boost::context::transfer_t t = t_;
     while ( true) {
-        boost::context::jump_fcontext( & fc, fcm, 7, preserve_fpu);
+        t = boost::context::jump_fcontext( t.ctx, 7, preserve_fpu);
     }
 }
 
@@ -43,12 +42,18 @@ static void bar( void * vp) {
 #endif
 
 duration_type measure_time_fc() {
+    stack_allocator stack_alloc;
+    boost::context::fcontext_t ctx = boost::context::make_fcontext(
+            stack_alloc.allocate( stack_allocator::default_stacksize() ),
+            stack_allocator::default_stacksize(),
+            foo);
+
     // cache warum-up
-    boost::context::jump_fcontext( & fcm, fc, 7, preserve_fpu);
+    boost::context::transfer_t t = boost::context::jump_fcontext( ctx, 7, preserve_fpu);
         
     time_point_type start( clock_type::now() );
     for ( std::size_t i = 0; i < jobs; ++i) {
-        boost::context::jump_fcontext( & fcm, fc, 7, preserve_fpu);
+        t = boost::context::jump_fcontext( t.ctx, 7, preserve_fpu);
     }
     duration_type total = clock_type::now() - start;
     total -= overhead_clock(); // overhead of measurement
@@ -81,12 +86,18 @@ duration_type measure_time_ec() {
 
 #ifdef BOOST_CONTEXT_CYCLE
 cycle_type measure_cycles_fc() {
+    stack_allocator stack_alloc;
+    boost::context::fcontext_t ctx = boost::context::make_fcontext(
+            stack_alloc.allocate( stack_allocator::default_stacksize() ),
+            stack_allocator::default_stacksize(),
+            foo);
+
     // cache warum-up
-    boost::context::jump_fcontext( & fcm, fc, 7, preserve_fpu);
+    boost::context::transfer_t t = boost::context::jump_fcontext( ctx, 7, preserve_fpu);
         
     cycle_type start( cycles() );
     for ( std::size_t i = 0; i < jobs; ++i) {
-        boost::context::jump_fcontext( & fcm, fc, 7, preserve_fpu);
+        t = boost::context::jump_fcontext( t.ctx, 7, preserve_fpu);
     }
     cycle_type total = cycles() - start;
     total -= overhead_cycle(); // overhead of measurement
@@ -143,12 +154,6 @@ int main( int argc, char * argv[])
             std::cout << desc << std::endl;
             return EXIT_SUCCESS;
         }
- 
-        stack_allocator stack_alloc;
-        fc = boost::context::make_fcontext(
-                stack_alloc.allocate( stack_allocator::default_stacksize() ),
-                stack_allocator::default_stacksize(),
-                foo);
 
         boost::uint64_t res = measure_time_fc().count();
         std::cout << "fcontext_t: average of " << res << " nano seconds" << std::endl;
