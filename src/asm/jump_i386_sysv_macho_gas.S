@@ -5,23 +5,23 @@
           http://www.boost.org/LICENSE_1_0.txt)
 */
 
-/****************************************************************************************
- *                                                                                      *
- *  ----------------------------------------------------------------------------------  *
- *  |    0    |    1    |    2    |    3    |    4     |    5    |    6    |    7    |  *
- *  ----------------------------------------------------------------------------------  *
- *  |   0x0   |   0x4   |   0x8   |   0xc   |   0x10   |   0x14  |   0x18  |   0x1c  |  *
- *  ----------------------------------------------------------------------------------  *
- *  | fc_mxcsr|fc_x87_cw|   EDI   |   ESI   |   EBX    |   EBP   |   EIP   |   EXIT  |  *
- *  ----------------------------------------------------------------------------------  *
- *                                                                                      *
- ****************************************************************************************/
+/************************************************************************************************************
+ *                                                                                                          *
+ *  ------------------------------------------------------------------------------------------------------  *
+ *  |    0    |    1    |    2    |    3    |    4     |    5    |    6    |    7    |    8    |    9    |  *
+ *  ------------------------------------------------------------------------------------------------------  *
+ *  |   0x0   |   0x4   |   0x8   |   0xc   |   0x10   |   0x14  |   0x18  |   0x1c  |   0x20  |   0x24  |  *
+ *  ------------------------------------------------------------------------------------------------------  *
+ *  | fc_mxcsr|fc_x87_cw|   EDI   |   ESI   |   EBX    |   EBP   |   EIP   |    VA   |    CTX  |   DATA  |  *
+ *  ------------------------------------------------------------------------------------------------------  *
+ *                                                                                                          *
+ ***********************************************************************************************************/
 
 .text
 .globl _jump_fcontext
 .align 2
 _jump_fcontext:
-    /* fourth arg of jump_fcontext() == flag indicating preserving FPU */
+    /* third arg of jump_fcontext() == flag indicating preserving FPU */
     movl  0x10(%esp), %ecx
 
     pushl  %ebp  /* save EBP */
@@ -42,20 +42,22 @@ _jump_fcontext:
     fnstcw  0x4(%esp)
 
 1:
-    /* first arg of jump_fcontext() == context jumping from */
-    movl  0x1c(%esp), %eax
+    /* hidden arg of jump_fcontext() == address of returned transfer_t */
+    movl  0x1c(%esp), %edx
 
-    /* store ESP (pointing to context-data) in EAX */
-    movl  %esp, (%eax)
+    /* temp. store stack address of prev. context */
+    movl  %esp, (%edx)
 
-    /* second arg of jump_fcontext() == context jumping to */
-    movl  0x20(%esp), %edx
-
-    /* third arg of jump_fcontext() == value to be returned after jump */
+    /* second arg of jump_fcontext() == intptr_t data */
     movl  0x24(%esp), %eax
+    /* temp. store intptr_t data of prev. context */
+    movl  %eax, 0x4(%edx)
+
+    /* first arg of jump_fcontext() == context jumping to */
+    movl  0x20(%esp), %eax
 
     /* restore ESP (pointing to context-data) from EDX */
-    movl  %edx, %esp
+    movl  %eax, %esp
 
     /* test for flag preserve_fpu */
     test  %ecx, %ecx
@@ -69,17 +71,34 @@ _jump_fcontext:
     /* prepare stack for FPU */
     leal  0x8(%esp), %esp
 
-    popl  %edi  /* restore EDI */
-    popl  %esi  /* restore ESI */
-    popl  %ebx  /* restore EBX */
-    popl  %ebp  /* restore EBP */
+    /* restore EDI */
+    popl  %edi
+    /* restore ESI */
+    popl  %esi
+    /* restore EBX */
+    popl  %ebx
+    /* restore EBP */
+    popl  %ebp
 
+    /* get address of transfer_t */
+    movl 0x4(%esp), %eax
+
+    /* load stack address of prev. context */
+    movl  (%edx), %ecx
+    /* store stack address of prev. context in returned transfer_t */
+    movl  %ecx, (%eax)
+    /* store stack address of prev. context as first arg */
+    movl  %ecx, 0x4(%esp)
+
+    /* load intptr_t data of prev. context */
+    movl  0x4(%edx), %ecx
+    /* store intptr_t data of prev. context in returned transfer_t */
+    movl  %ecx, 0x4(%eax)
+    /* store intpr_t data of prev. context as first arg */
+    movl  %ecx, 0x8(%esp)
+ 
     /* restore return-address */
     popl  %edx
-
-    /* use value in EAX as return-value after jump */
-    /* use value in EAX as first arg in context function */
-    movl  %eax, 0x4(%esp)
 
     /* indirect jump to context */
     jmp  *%edx
