@@ -5,17 +5,24 @@
           http://www.boost.org/LICENSE_1_0.txt)
 */
 
-/********************************************************************
- *                                                                  *
- *  --------------------------------------------------------------  *
- *  |    0    |    1    |    2    |    3    |    4     |    5    |  *
- *  --------------------------------------------------------------  *
- *  |   0x0   |   0x4   |   0x8   |   0xc   |   0x10   |   0x14  |  *
- *  --------------------------------------------------------------  *
- *  |   EDI   |   ESI   |   EBX   |   EBP   |   EIP    |   EXIT  |  *
- *  --------------------------------------------------------------  *
- *                                                                  *
- ********************************************************************/
+/*****************************************************************************************
+ *                                                                                       *
+ *  -----------------------------------------------------------------------------------  *
+ *  |    0    |    1    |    2    |    3    |    4     |    5    |    6     |    7    |  *
+ *  -----------------------------------------------------------------------------------  *
+ *  |   0x0   |   0x4   |   0x8   |   0xc   |   0x10   |   0x14  |   0x18   |   0x1c  |  *
+ *  -----------------------------------------------------------------------------------  *
+ *  |   EDI   |   ESI   |   EBX   |   EBP   |   EIP    |  hidden |    to    |   data  |  *
+ *  -----------------------------------------------------------------------------------  *
+ *  -----------------------------------------------------------------------------------  *
+ *  |    8    |    9    |    10   |    11   |    13    |    14   |    15    |    16   |  *
+ *  -----------------------------------------------------------------------------------  *
+ *  |   0x20  |   0x24  |   0x28  |   0x2c  |    0x30  |   0x34  |    0x38  |   0x3c  |  *
+ *  -----------------------------------------------------------------------------------  *
+ *  |   FCTX  |   DATA  |   FN    |         |          |         |          |         |  *
+ *  -----------------------------------------------------------------------------------  *
+ *                                                                                       *
+ *****************************************************************************************/
 
 .text
 .globl make_fcontext
@@ -34,30 +41,55 @@ make_fcontext:
 
     /* reserve space for context-data on context-stack */
     /* on context-function entry: (ESP -0x4) % 8 == 0 */
-    leal  -0x18(%eax), %eax
+    leal  -0x34(%eax), %eax
 
     /* third arg of make_fcontext() == address of context-function */
-    movl  0xc(%esp), %edx
-    movl  %edx, 0x10(%eax)
+    movl  0xc(%esp), %ecx
+    movl  %ecx, 0x28(%eax)
+
+    /* return transport_t */
+    leal  0x20(%eax), %ecx
+    movl  %ecx, 0x14(%eax)
+
+    /* compute abs address of label trampoline */
+    call  1f
+    /* address of trampoline 1 */
+1:  popl  %ecx
+    /* compute abs address of label trampoline */
+    addl  $trampoline-1b, %ecx
+    /* save address of trampoline as return address */
+    /* will be entered after calling jump_fcontext() first time */
+    movl  %ecx, 0x10(%eax)
 
     /* compute abs address of label finish */
-    call  1f
-    /* address of label 1 */
-1:  popl  %ecx
+    call  2f
+    /* address of label 2 */
+2:  popl  %ecx
     /* compute abs address of label finish */
-    addl  $finish-1b, %ecx
+    addl  $finish-2b, %ecx
     /* save address of finish as return-address for context-function */
     /* will be entered after context-function returns */
-    movl  %ecx, 0x14(%eax)
+    movl  %ecx, 0xc(%eax) 
 
     ret /* return pointer to context-data */
 
+trampoline:
+    /* move transport_t for entering context-function */
+    movl  0xc(%esp), %ecx
+    movl  %ecx, (%esp)
+    movl  0x10(%esp), %ecx
+    movl  %ecx, 0x4(%esp)
+    pushl %ebp
+    /* jump to context-function */
+    movl 0x18(%esp), %ecx
+    jmp *%ecx
+
 finish:
-    call  2f
-    /* address of label 2 */
-2:  popl  %ebx
+    call  3f
+    /* address of label 3 */
+3:  popl  %ebx
     /* compute address of GOT and store it in EBX */
-    addl  $_GLOBAL_OFFSET_TABLE_+[.-2b], %ebx
+    addl  $_GLOBAL_OFFSET_TABLE_+[.-3b], %ebx
 
     /* exit code is zero */
     xorl  %eax, %eax
