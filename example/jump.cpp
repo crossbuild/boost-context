@@ -22,10 +22,15 @@ typedef ctx::simple_stack_allocator<
 >       stack_allocator;
 
 void f1( ctx::transfer_t t_) {
+    BOOST_ASSERT( 3 == (int)t_.data);
     std::cout << "f1: entered first time" << std::endl;
-    ctx::transfer_t t = ctx::jump_fcontext( t_.fctx, 0);
+    ctx::transfer_t t = ctx::jump_fcontext( t_.fctx, (void*)5);
+    BOOST_ASSERT( 7 == (int)t.data);
     std::cout << "f1: entered second time" << std::endl;
-    ctx::jump_fcontext( t.fctx, 0);
+    t = ctx::jump_fcontext( t.fctx, (void*)9);
+    BOOST_ASSERT( 11 == (int)t.data);
+    std::cout << "f1: entered third time" << std::endl;
+    ctx::jump_fcontext( t.fctx, (void*)13);
 }
 
 int main( int argc, char * argv[]) {
@@ -35,8 +40,12 @@ int main( int argc, char * argv[]) {
     ctx::fcontext_t ctx = ctx::make_fcontext( base1, stack_allocator::default_stacksize(), f1);
 
     std::cout << "main: call start_fcontext( ctx, 0)" << std::endl;
-    ctx::transfer_t t = ctx::jump_fcontext( ctx, 0);
-    t = ctx::jump_fcontext( t.fctx, 0);
+    ctx::transfer_t t = ctx::jump_fcontext( ctx, (void*)3);
+    BOOST_ASSERT( 5 == (int)t.data);
+    t = ctx::jump_fcontext( t.fctx, (void*)7);
+    BOOST_ASSERT( 9 == (int)t.data);
+    t = ctx::jump_fcontext( t.fctx, (void*)11);
+    BOOST_ASSERT( 13 == (int)t.data);
 
     std::cout << "main: done" << std::endl;
 
