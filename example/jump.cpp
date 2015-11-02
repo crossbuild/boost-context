@@ -21,16 +21,16 @@ typedef ctx::simple_stack_allocator<
     8 * 1024 // 8kB
 >       stack_allocator;
 
-void f1( ctx::transfer_t t_) {
-    BOOST_ASSERT( 3 == (int)t_.data);
-    std::cout << "f1: entered first time" << std::endl;
-    ctx::transfer_t t = ctx::jump_fcontext( t_.fctx, (void*)5);
-    BOOST_ASSERT( 7 == (int)t.data);
-    std::cout << "f1: entered second time" << std::endl;
-    t = ctx::jump_fcontext( t.fctx, (void*)9);
-    BOOST_ASSERT( 11 == (int)t.data);
-    std::cout << "f1: entered third time" << std::endl;
-    ctx::jump_fcontext( t.fctx, (void*)13);
+void f1( ctx::transfer_t t1) {
+    BOOST_ASSERT( 3 == (int)t1.data);
+    std::cout << "f1: entered first time : " << (int)t1.data << std::endl;
+    ctx::transfer_t t2 = ctx::jump_fcontext_( t1.fctx, (void*)5);
+    BOOST_ASSERT( 7 == (int)t2.data);
+    std::cout << "f1: entered second time : " << (int)t2.data << std::endl;
+    ctx::transfer_t t3 = ctx::jump_fcontext_( t2.fctx, (void*)9);
+    BOOST_ASSERT( 11 == (int)t3.data);
+    std::cout << "f1: entered third time : " << (int)t3.data << std::endl;
+    ctx::jump_fcontext_( t3.fctx, (void*)13);
 }
 
 int main( int argc, char * argv[]) {
@@ -40,12 +40,15 @@ int main( int argc, char * argv[]) {
     ctx::fcontext_t ctx = ctx::make_fcontext( base1, stack_allocator::default_stacksize(), f1);
 
     std::cout << "main: call start_fcontext( ctx, 0)" << std::endl;
-    ctx::transfer_t t = ctx::jump_fcontext( ctx, (void*)3);
-    BOOST_ASSERT( 5 == (int)t.data);
-    t = ctx::jump_fcontext( t.fctx, (void*)7);
-    BOOST_ASSERT( 9 == (int)t.data);
-    t = ctx::jump_fcontext( t.fctx, (void*)11);
-    BOOST_ASSERT( 13 == (int)t.data);
+    ctx::transfer_t t1 = ctx::jump_fcontext_( ctx, (void*)3);
+    BOOST_ASSERT( 5 == (int)t1.data);
+    std::cout << "f1: returned first time : " << (int)t1.data << std::endl;
+    ctx::transfer_t t2 = ctx::jump_fcontext_( t1.fctx, (void*)7);
+    BOOST_ASSERT( 9 == (int)t2.data);
+    std::cout << "f1: returned second time : " << (int)t2.data << std::endl;
+    ctx::transfer_t t3 = ctx::jump_fcontext_( t2.fctx, (void*)11);
+    BOOST_ASSERT( 13 == (int)t3.data);
+    std::cout << "f1: returned third time : " << (int)t3.data << std::endl;
 
     std::cout << "main: done" << std::endl;
 
