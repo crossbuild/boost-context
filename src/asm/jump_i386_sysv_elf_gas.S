@@ -58,11 +58,8 @@ jump_fcontext:
     popl  %ebx  /* restore EBX */
     popl  %ebp  /* restore EBP */
 
-    /* restore return-address */
-    popl  %edx
-
-    /* indirect jump to context */
-    jmp  *%edx
+    /* jump to context */
+    ret $4
 .size jump_fcontext,.-jump_fcontext
 
 /* Mark that we don't need executable stack.  */

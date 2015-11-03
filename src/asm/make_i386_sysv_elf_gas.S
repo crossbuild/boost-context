@@ -75,13 +75,13 @@ make_fcontext:
 
 trampoline:
     /* move transport_t for entering context-function */
-    movl  0xc(%esp), %ecx
+    movl  0x8(%esp), %ecx
     movl  %ecx, (%esp)
-    movl  0x10(%esp), %ecx
+    movl  0xc(%esp), %ecx
     movl  %ecx, 0x4(%esp)
     pushl %ebp
     /* jump to context-function */
-    movl 0x18(%esp), %ecx
+    movl 0x14(%esp), %ecx
     jmp *%ecx
 
 finish:
