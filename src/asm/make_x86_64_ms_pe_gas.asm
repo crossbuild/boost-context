@@ -83,10 +83,10 @@ make_fcontext:
     /* store address of transport_t in hidden field */
     movq %rcx, 0x60(%rax)
 
-    ; compute abs address of label trampoline
+    /* compute abs address of label trampoline */
     leaq  trampoline(%rip), %rcx
-    ; save address of trampolineas return-address for context-function
-    ; will be entered if context-function is entered the first time
+    /* save address of trampolineas return-address for context-function */
+    /* will be entered if context-function is entered the first time */
     movq %rcx, 0x68(%rax)
 
     /* compute abs address of label finish */
@@ -105,7 +105,7 @@ trampoline:
     jmp  *%r8
 
 finish:
-    ; 32byte shadow-space for _exit()
+    /* 32byte shadow-space for _exit() */
     andq  $-32, %rsp
     /* 32byte shadow-space for _exit() are */
     /* already reserved by make_fcontext() */
