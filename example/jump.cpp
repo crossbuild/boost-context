@@ -22,11 +22,11 @@ typedef ctx::simple_stack_allocator<
 >       stack_allocator;
 
 void f1( ctx::transfer_t t_) {
-    std::cout << "& t_ = " << & t_ << ", fctx == " << t_.fctx << std::endl;
+    std::cout << "f1: entered first time" << std::endl;
     ctx::transfer_t t = ctx::jump_fcontext( t_.fctx, t_.data);
-    std::cout << "1. & t == " << &  t << ", fctx == " << t.fctx << std::endl;
+    std::cout << "f1: entered second time" << std::endl;
     t = ctx::jump_fcontext( t.fctx, t.data);
-    std::cout << "2. & t == " << & t << ", fctx == " << t.fctx << std::endl;
+    std::cout << "f1: entered third time" << std::endl;
     ctx::jump_fcontext( t.fctx, t.data);
 }
 
