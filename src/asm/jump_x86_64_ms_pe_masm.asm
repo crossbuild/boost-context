@@ -4,6 +4,8 @@
 ;     (See accompanying file LICENSE_1_0.txt or copy at
 ;           http://www.boost.org/LICENSE_1_0.txt)
 
+
+;  ----------------------------------------------------------------------------------
 ;  ----------------------------------------------------------------------------------
 ;  |     0   |     1   |     2    |     3   |     4   |     5   |     6   |     7   |
 ;  ----------------------------------------------------------------------------------
@@ -30,13 +32,15 @@
 ;  ----------------------------------------------------------------------------------
 ;  |   0x60  |   0x64  |   0x68   |   0x6c  |   0x70  |   0x74  |   0x78  |   0x7c  |
 ;  ----------------------------------------------------------------------------------
-;  |        RIP        |        EXIT        |                                       |
+;  |        hidden     |         RIP        |         FN        |                   |
 ;  ----------------------------------------------------------------------------------
 
 .code
 
 jump_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     .endprolog
+
+    push  rcx  ; save hidden address of transport_t
 
     push  rbp  ; save RBP
     push  rbx  ; save RBX
@@ -62,8 +66,8 @@ jump_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     mov  rax, [r10+018h]
     push  rax
 
-    ; store RSP (pointing to context-data) in RCX
-    mov  [rcx], rsp
+    ; preserve RSP (pointing to context-data) in R9
+    mov  r9, rsp
 
     ; restore RSP (pointing to context-data) from RDX
     mov  rsp, rdx
@@ -92,13 +96,19 @@ jump_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     pop  rbx  ; restore RBX
     pop  rbp  ; restore RBP
 
+    pop  rax  ; restore hidden address of transport_t
+
     ; restore return-address
     pop  r10
 
-    ; use third arg as return-value after jump
-    mov  rax, r8
-    ; use third arg as first arg in context function
-    mov  rcx, r8
+    ; transport_t returned in RAX
+    ; return parent fcontext_t
+    mov  [rax], r9
+    ; return data
+    mov  [rax+08h], r8
+
+    ; transport_t as 1.arg of context-function
+    mov rcx,  rax
 
     ; indirect jump to context
     jmp  r10

@@ -14,7 +14,7 @@
 ;  ----------------------------------------------------------------------------------
 ;  |     8   |    9    |    10    |    11   |    12   |    13   |    14   |    15   |
 ;  ----------------------------------------------------------------------------------
-;  |   0xc20 |  0x24   |   0x28   |   0x2c  |   0x30  |   0x34  |   0x38  |   0x3c  |
+;  |   0x20  |  0x24   |   0x28   |   0x2c  |   0x30  |   0x34  |   0x38  |   0x3c  |
 ;  ----------------------------------------------------------------------------------
 ;  |        R12        |         R13        |        R14        |        R15        |
 ;  ----------------------------------------------------------------------------------
@@ -30,7 +30,7 @@
 ;  ----------------------------------------------------------------------------------
 ;  |   0x60  |   0x64  |   0x68   |   0x6c  |   0x70  |   0x74  |   0x78  |   0x7c  |
 ;  ----------------------------------------------------------------------------------
-;  |        RIP        |        EXIT        |                                       |
+;  |        hidden     |         RIP        |         FN        |                   |
 ;  ----------------------------------------------------------------------------------
 
 ; standard C library function
@@ -55,10 +55,10 @@ make_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     ; reserve space for context-data on context-stack
     ; size for fc_mxcsr .. RIP + return-address for context-function
     ; on context-function entry: (RSP -0x8) % 16 == 0
-    sub  rax, 070h
+    sub  rax, 080h
 
     ; third arg of make_fcontext() == address of context-function
-    mov  [rax+060h], r8
+    mov  [rax+070h], r8
 
     ; first arg of make_fcontext() == top of context-stack
     ; save top address of context stack as 'base'
@@ -73,17 +73,35 @@ make_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     ; save address of context stack limit as 'dealloction stack'
     mov  [rax+08h], rcx
 
+    ; compute address of transport_t
+    lea rcx, [rax+020h]
+    ; store address of transport_t in hidden field
+    mov [rax+060h], rcx
+
+    ; compute abs address of label trampoline
+    lea  rcx, trampoline
+    ; save address of trampolineas return-address for context-function
+    ; will be entered if context-function is entered the first time
+    mov  [rax+068h], rcx
+
     ; compute abs address of label finish
     lea  rcx, finish
     ; save address of finish as return-address for context-function
     ; will be entered after context-function returns
-    mov  [rax+068h], rcx
+    mov  [rax+058h], rcx
 
     ret ; return pointer to context-data
 
+trampoline:
+    ; push address of label finish as return address
+    push  rbp
+    ; indirect jump to context-function
+    mov  r8, [rsp+08h]
+    jmp  r8
+
 finish:
-    ; 32byte shadow-space for _exit() are
-    ; already reserved by make_fcontext()
+    ; 32byte shadow-space for _exit()
+    sub  rsp, 040h
     ; exit code is zero
     xor  rcx, rcx
     ; exit application
