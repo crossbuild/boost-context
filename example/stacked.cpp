@@ -26,9 +26,9 @@ void f2( ctx::transfer_t t) {
     ctx::jump_fcontext( t.fctx, t.data);
 }
 
-void f1( ctx::transfer_t t) {
+void f1( ctx::transfer_t t_) {
+    ctx::transfer_t t = t_;
     std::cout << "f1: entered" << std::endl;
-
     stack_allocator alloc;
     void * sp = alloc.allocate( stack_allocator::default_stacksize());
     ctx::fcontext_t ctx_ = ctx::make_fcontext( sp, stack_allocator::default_stacksize(), f2);
