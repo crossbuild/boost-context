@@ -34,7 +34,7 @@
  * ----------------------------------------------------------------------------------  *
  * |   0x60  |   0x64  |   0x68   |   0x6c  |   0x70  |   0x74  |   0x78  |   0x7c  |  *
  * ----------------------------------------------------------------------------------  *
- * |        hidden     |         RIP        |         FN        |                   |  *
+ * |        hidden     |         RIP        |        EXIT       |                   |  *
  * ----------------------------------------------------------------------------------  *
  *                                                                                     *
  * ************************************************************************************/
@@ -60,10 +60,10 @@ make_fcontext:
 
     /* reserve space for context-data on context-stack */
     /* on context-function entry: (RSP -0x8) % 16 == 0 */
-    leaq  -0x80(%rax), %rax
+    leaq  -0x78(%rax), %rax
 
     /* third arg of make_fcontext() == address of context-function */
-    movq  %r8, 0x70(%rax)
+    movq  %r8, 0x68(%rax)
 
     /* first arg of make_fcontext() == top of context-stack */
     /* save top address of context stack as 'base' */
@@ -83,12 +83,6 @@ make_fcontext:
     /* store address of transport_t in hidden field */
     movq %rcx, 0x60(%rax)
 
-    /* compute abs address of label trampoline */
-    leaq  trampoline(%rip), %rcx
-    /* save address of trampolineas return-address for context-function */
-    /* will be entered if context-function is entered the first time */
-    movq %rcx, 0x68(%rax)
-
     /* compute abs address of label finish */
     leaq  finish(%rip), %rcx
     /* save address of finish as return-address for context-function */
@@ -96,13 +90,6 @@ make_fcontext:
     movq  %rcx, 0x58(%rax)
 
     ret /* return pointer to context-data */
-
-trampoline:
-    /* push address of label finish as return address */
-    pushq  %rbp
-    /* indirect jump to context-function */
-    mov  0x8(%rsp), %r8
-    jmp  *%r8
 
 finish:
     /* 32byte shadow-space for _exit() */
